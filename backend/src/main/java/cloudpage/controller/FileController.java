@@ -1,5 +1,6 @@
 package cloudpage.controller;
 
+import cloudpage.dto.FileResource;
 import cloudpage.exceptions.FileNotFoundException;
 import cloudpage.service.FileService;
 import cloudpage.service.FolderService;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -64,12 +66,16 @@ public class FileController {
     var user = userService.getCurrentUser();
     Path fullPath = Paths.get(user.getRootFolderPath(), path).normalize();
     folderService.validatePath(user.getRootFolderPath(), fullPath); // ensure security
-    Resource resource = new UrlResource(fullPath.toUri());
+
+      FileResource result = fileService.loadAsResource(fullPath);
+
     return ResponseEntity.ok()
+            .eTag(result.getETag())
+            .lastModified(result.getLastModified())
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"" + fullPath.getFileName() + "\"")
-        .body(resource);
+        .body(result.getResource());
   }
 
   @GetMapping("/view")
