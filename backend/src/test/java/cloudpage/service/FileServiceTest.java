@@ -1,13 +1,12 @@
 package cloudpage.service;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import cloudpage.dto.FileResource;
 import cloudpage.exceptions.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FileServiceTest {
   private final FileService fileService = new FileService();
@@ -16,6 +15,7 @@ public class FileServiceTest {
   void loadAsResource_existing_returnsResource() throws Exception {
 
     Path tempFile = Files.createTempFile("test-", ".txt");
+    tempFile.toFile().deleteOnExit();
     Files.writeString(tempFile, "Hello");
 
     FileResource result = fileService.loadAsResource(tempFile);
@@ -23,7 +23,7 @@ public class FileServiceTest {
     assertNotNull(result);
     assertNotNull(result.getResource(), "Resource should not be null");
     assertNotNull(result.getETag(), "ETag should not be null");
-    assertNotNull(result.getLastModified() > 0, "Last modified should be > 0");
+    assertTrue(result.getLastModified() > 0, "Last modified should be > 0");
   }
 
   @Test
