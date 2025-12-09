@@ -1,5 +1,7 @@
 package cloudpage.service;
 
+import cloudpage.dto.FileResource;
+import cloudpage.exceptions.FileNotFoundException;
 import cloudpage.exceptions.InvalidPathException;
 import cloudpage.exceptions.ResourceNotFoundException;
 import java.io.IOException;
@@ -7,6 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -56,5 +61,20 @@ public class FileService {
     if (!path.toAbsolutePath().startsWith(Paths.get(rootPath).toAbsolutePath())) {
       throw new InvalidPathException("Access outside the user's root folder is forbidden: " + path);
     }
+  }
+
+  public FileResource loadAsResource(Path fullPath) throws IOException {
+    if (!Files.exists(fullPath) || !Files.isRegularFile(fullPath) || !Files.isReadable(fullPath)) {
+      throw new FileNotFoundException("File not found: " + fullPath);
+    }
+
+    Resource resource = new UrlResource(fullPath.toUri());
+
+    BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
+    String etag = "\"" + attrs.size() + "-" + attrs.lastModifiedTime().toMillis() + "\"";
+
+    long lastModified = attrs.lastModifiedTime().toMillis();
+
+    return new FileResource(resource, etag, lastModified);
   }
 }
