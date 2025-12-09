@@ -10,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -64,18 +63,18 @@ public class FileService {
     }
   }
 
-  public FileResource loadAsResource(Path fullPath) throws IOException{
-      if(!Files.exists(fullPath)||!Files.isRegularFile(fullPath)||!Files.isReadable(fullPath)){
-          throw new FileNotFoundException("File not found: " + fullPath);
-      }
+  public FileResource loadAsResource(Path fullPath) throws IOException {
+    if (!Files.exists(fullPath) || !Files.isRegularFile(fullPath) || !Files.isReadable(fullPath)) {
+      throw new FileNotFoundException("File not found: " + fullPath);
+    }
 
-      Resource resource = new UrlResource(fullPath.toUri());
+    Resource resource = new UrlResource(fullPath.toUri());
 
-      BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
-      String etag = "\"" + attrs.size() + "-" + attrs.lastModifiedTime().toMillis() + "\"";
+    BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
+    String etag = "\"" + attrs.size() + "-" + attrs.lastModifiedTime().toMillis() + "\"";
 
-      long lastModified = attrs.lastModifiedTime().toMillis();
+    long lastModified = attrs.lastModifiedTime().toMillis();
 
-      return new FileResource(resource, etag, lastModified);
+    return new FileResource(resource, etag, lastModified);
   }
 }

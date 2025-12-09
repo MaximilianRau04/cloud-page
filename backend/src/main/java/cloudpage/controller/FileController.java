@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -67,11 +66,11 @@ public class FileController {
     Path fullPath = Paths.get(user.getRootFolderPath(), path).normalize();
     folderService.validatePath(user.getRootFolderPath(), fullPath); // ensure security
 
-      FileResource result = fileService.loadAsResource(fullPath);
+    FileResource result = fileService.loadAsResource(fullPath);
 
     return ResponseEntity.ok()
-            .eTag(result.getETag())
-            .lastModified(result.getLastModified())
+        .eTag(result.getETag())
+        .lastModified(result.getLastModified())
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"" + fullPath.getFileName() + "\"")
