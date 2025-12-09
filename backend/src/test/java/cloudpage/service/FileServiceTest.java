@@ -1,12 +1,12 @@
 package cloudpage.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import cloudpage.dto.FileResource;
 import cloudpage.exceptions.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class FileServiceTest {
   private final FileService fileService = new FileService();
