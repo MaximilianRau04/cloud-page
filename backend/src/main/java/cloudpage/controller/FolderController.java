@@ -36,7 +36,7 @@ public class FolderController {
       @RequestParam int size,
       @RequestParam(required = false) String sort)
       throws IOException {
-    if (page <= 0) {
+    if (page < 0) {
       throw new IllegalArgumentException("page must be greater than or equal to 0");
     }
     if (size <= 0) {
