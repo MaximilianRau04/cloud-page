@@ -3,6 +3,7 @@ package cloudpage.service;
 import static org.junit.jupiter.api.Assertions.*;
 
 import cloudpage.dto.FolderContentItemDto;
+import cloudpage.dto.FolderDto;
 import cloudpage.dto.PageResponseDto;
 import cloudpage.exceptions.InvalidPathException;
 import java.io.IOException;
@@ -206,5 +207,238 @@ class FolderServiceTest {
     assertEquals("info.txt", tree.getFiles().get(0).getName());
     assertEquals(5, tree.getFiles().get(0).getSize());
     assertNotNull(tree.getFiles().get(0).getPath());
+  }
+
+  // ── getFolderContentPage ───────────────────────────────────────────────────
+
+  @Test
+  void getFolderContentPage_emptyFolder_returnsEmptyPage() throws IOException {
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(0, result.getTotalElements());
+    assertEquals(0, result.getTotalPages());
+    assertEquals(0, result.getPageNumber());
+    assertTrue(result.getContent().isEmpty());
+  }
+
+  @Test
+  void getFolderContentPage_firstPage_returnsCorrectItems() throws IOException {
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+    Files.writeString(tempDir.resolve("file2.txt"), "content2");
+    Files.writeString(tempDir.resolve("file3.txt"), "content3");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 2, null);
+
+    assertNotNull(result);
+    assertEquals(3, result.getTotalElements());
+    assertEquals(2, result.getTotalPages());
+    assertEquals(0, result.getPageNumber());
+    assertEquals(2, result.getContent().size());
+  }
+
+  @Test
+  void getFolderContentPage_secondPage_returnsCorrectItems() throws IOException {
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+    Files.writeString(tempDir.resolve("file2.txt"), "content2");
+    Files.writeString(tempDir.resolve("file3.txt"), "content3");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 1, 2, null);
+
+    assertNotNull(result);
+    assertEquals(3, result.getTotalElements());
+    assertEquals(2, result.getTotalPages());
+    assertEquals(1, result.getPageNumber());
+    assertEquals(1, result.getContent().size());
+  }
+
+  @Test
+  void getFolderContentPage_pageBeyondData_returnsEmptyContent() throws IOException {
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 5, 10, null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getTotalElements());
+    assertEquals(1, result.getTotalPages());
+    assertEquals(5, result.getPageNumber());
+    assertTrue(result.getContent().isEmpty());
+  }
+
+  @Test
+  void getFolderContentPage_sizeLargerThanTotal_returnsAllItems() throws IOException {
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+    Files.writeString(tempDir.resolve("file2.txt"), "content2");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 100, null);
+
+    assertNotNull(result);
+    assertEquals(2, result.getTotalElements());
+    assertEquals(1, result.getTotalPages());
+    assertEquals(0, result.getPageNumber());
+    assertEquals(2, result.getContent().size());
+  }
+
+  @Test
+  void getFolderContentPage_withFoldersAndFiles_returnsBoth() throws IOException {
+    Files.createDirectory(tempDir.resolve("folder1"));
+    Files.createDirectory(tempDir.resolve("folder2"));
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(3, result.getTotalElements());
+    assertTrue(result.getContent().stream().anyMatch(FolderContentItemDto::isDirectory));
+    assertTrue(result.getContent().stream().anyMatch(item -> !item.isDirectory()));
+  }
+
+  @Test
+  void getFolderContentPage_sortByNameAscending_returnsSortedItems() throws IOException {
+    Files.writeString(tempDir.resolve("zebra.txt"), "z");
+    Files.writeString(tempDir.resolve("apple.txt"), "a");
+    Files.writeString(tempDir.resolve("banana.txt"), "b");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, "name,asc");
+
+    assertNotNull(result);
+    assertEquals(3, result.getContent().size());
+    assertEquals("apple.txt", result.getContent().get(0).getName());
+    assertEquals("banana.txt", result.getContent().get(1).getName());
+    assertEquals("zebra.txt", result.getContent().get(2).getName());
+  }
+
+  @Test
+  void getFolderContentPage_sortByNameDescending_returnsSortedItems() throws IOException {
+    Files.writeString(tempDir.resolve("apple.txt"), "a");
+    Files.writeString(tempDir.resolve("banana.txt"), "b");
+    Files.writeString(tempDir.resolve("zebra.txt"), "z");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, "name,desc");
+
+    assertNotNull(result);
+    assertEquals(3, result.getContent().size());
+    assertEquals("zebra.txt", result.getContent().get(0).getName());
+    assertEquals("banana.txt", result.getContent().get(1).getName());
+    assertEquals("apple.txt", result.getContent().get(2).getName());
+  }
+
+  @Test
+  void getFolderContentPage_sortDefault_returnsSortedByNameAscending() throws IOException {
+    Files.writeString(tempDir.resolve("zebra.txt"), "z");
+    Files.writeString(tempDir.resolve("apple.txt"), "a");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(2, result.getContent().size());
+    assertEquals("apple.txt", result.getContent().get(0).getName());
+    assertEquals("zebra.txt", result.getContent().get(1).getName());
+  }
+
+  @Test
+  void getFolderContentPage_sortEmptyString_usesDefaultSort() throws IOException {
+    Files.writeString(tempDir.resolve("zebra.txt"), "z");
+    Files.writeString(tempDir.resolve("apple.txt"), "a");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, "");
+
+    assertNotNull(result);
+    assertEquals(2, result.getContent().size());
+    assertEquals("apple.txt", result.getContent().get(0).getName());
+  }
+
+  @Test
+  void getFolderContentPage_withSubfolder_returnsCorrectItems() throws IOException {
+    Path subFolder = Files.createDirectory(tempDir.resolve("sub"));
+    Files.writeString(tempDir.resolve("root.txt"), "root");
+    Files.writeString(subFolder.resolve("sub.txt"), "sub");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "sub", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getTotalElements());
+    assertEquals("sub.txt", result.getContent().get(0).getName());
+    assertFalse(result.getContent().get(0).isDirectory());
+  }
+
+  @Test
+  void getFolderContentPage_negativePage_throwsIllegalArgumentException() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> folderService.getFolderContentPage(tempDir.toString(), "", -1, 10, null));
+  }
+
+  @Test
+  void getFolderContentPage_zeroSize_throwsIllegalArgumentException() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> folderService.getFolderContentPage(tempDir.toString(), "", 0, 0, null));
+  }
+
+  @Test
+  void getFolderContentPage_negativeSize_throwsIllegalArgumentException() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> folderService.getFolderContentPage(tempDir.toString(), "", 0, -5, null));
+  }
+
+  @Test
+  void getFolderContentPage_nonExistentFolder_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.getFolderContentPage(tempDir.toString(), "nonexistent", 0, 10, null));
+  }
+
+  @Test
+  void getFolderContentPage_pathTraversal_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () ->
+            folderService.getFolderContentPage(
+                tempDir.toString(), "../../etc", 0, 10, null));
+  }
+
+  @Test
+  void getFolderContentPage_fileMetadata_containsCorrectFields() throws IOException {
+    Files.writeString(tempDir.resolve("test.txt"), "12345");
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getContent().size());
+    FolderContentItemDto item = result.getContent().get(0);
+    assertEquals("test.txt", item.getName());
+    assertEquals(5, item.getSize());
+    assertFalse(item.isDirectory());
+    assertNotNull(item.getPath());
+  }
+
+  @Test
+  void getFolderContentPage_folderMetadata_containsCorrectFields() throws IOException {
+    Files.createDirectory(tempDir.resolve("testFolder"));
+
+    PageResponseDto<FolderContentItemDto> result =
+        folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
+
+    assertNotNull(result);
+    assertEquals(1, result.getContent().size());
+    FolderContentItemDto item = result.getContent().get(0);
+    assertEquals("testFolder", item.getName());
+    assertEquals(0, item.getSize());
+    assertTrue(item.isDirectory());
+    assertNotNull(item.getPath());
   }
 }
