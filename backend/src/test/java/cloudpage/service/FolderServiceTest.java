@@ -8,110 +8,203 @@ import cloudpage.exceptions.InvalidPathException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-public class FolderServiceTest {
+class FolderServiceTest {
 
-  private final FolderService folderService = new FolderService();
+  private FolderService folderService;
+
+  @TempDir Path tempDir;
+
+  @BeforeEach
+  void setUp() {
+    folderService = new FolderService();
+  }
+
+  // ── getFolderTree(rootPath) ──────────────────────────────────────────────
 
   @Test
-  void getFolderContentPage_firstPage_basicPagination() throws IOException {
-    Path tempDir = Files.createTempDirectory("folder-service-test-");
-    try {
-      // create 15 files
-      for (int i = 0; i < 15; i++) {
-        Files.writeString(tempDir.resolve("file-" + i + ".txt"), "data" + i);
-      }
+  void getFolderTree_emptyFolder_returnsEmptyLists() throws IOException {
+    FolderDto tree = folderService.getFolderTree(tempDir.toString());
 
-      PageResponseDto<FolderContentItemDto> page =
-          folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, null);
-
-      assertEquals(0, page.getPageNumber());
-      assertEquals(15, page.getTotalElements());
-      assertEquals(2, page.getTotalPages());
-      assertEquals(10, page.getContent().size());
-    } finally {
-      Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-    }
+    assertNotNull(tree);
+    assertTrue(tree.getFolders().isEmpty());
+    assertTrue(tree.getFiles().isEmpty());
   }
 
   @Test
-  void getFolderContentPage_lastPagePartial() throws IOException {
-    Path tempDir = Files.createTempDirectory("folder-service-test-");
-    try {
-      // create 23 files
-      for (int i = 0; i < 23; i++) {
-        Files.writeString(tempDir.resolve("file-" + i + ".txt"), "data" + i);
-      }
+  void getFolderTree_withFiles_returnsFileList() throws IOException {
+    Files.writeString(tempDir.resolve("file1.txt"), "content1");
+    Files.writeString(tempDir.resolve("file2.txt"), "content2");
 
-      PageResponseDto<FolderContentItemDto> page =
-          folderService.getFolderContentPage(tempDir.toString(), "", 2, 10, null);
+    FolderDto tree = folderService.getFolderTree(tempDir.toString());
 
-      assertEquals(2, page.getPageNumber());
-      assertEquals(23, page.getTotalElements());
-      assertEquals(3, page.getTotalPages());
-      assertEquals(3, page.getContent().size());
-    } finally {
-      Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-    }
+    assertEquals(2, tree.getFiles().size());
+    assertTrue(tree.getFolders().isEmpty());
   }
 
   @Test
-  void getFolderContentPage_pageBeyondLast_returnsEmptyContent() throws IOException {
-    Path tempDir = Files.createTempDirectory("folder-service-test-");
-    try {
-      // create 5 files
-      for (int i = 0; i < 5; i++) {
-        Files.writeString(tempDir.resolve("file-" + i + ".txt"), "data" + i);
-      }
+  void getFolderTree_nestedFoldersWithFiles_returnsFullTree() throws IOException {
+    Path sub = Files.createDirectory(tempDir.resolve("sub"));
+    Files.writeString(tempDir.resolve("root.txt"), "root");
+    Files.writeString(sub.resolve("child.txt"), "child");
 
-      PageResponseDto<FolderContentItemDto> page =
-          folderService.getFolderContentPage(tempDir.toString(), "", 2, 10, null);
+    FolderDto tree = folderService.getFolderTree(tempDir.toString());
 
-      assertEquals(2, page.getPageNumber());
-      assertEquals(5, page.getTotalElements());
-      assertEquals(1, page.getTotalPages());
-      assertTrue(page.getContent().isEmpty());
-    } finally {
-      Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-    }
+    assertEquals(1, tree.getFiles().size());
+    assertEquals(1, tree.getFolders().size());
+    assertEquals("sub", tree.getFolders().get(0).getName());
+    assertEquals(1, tree.getFolders().get(0).getFiles().size());
+    assertEquals("child.txt", tree.getFolders().get(0).getFiles().get(0).getName());
   }
 
   @Test
-  void getFolderContentPage_sortByNameAscending() throws IOException {
-    Path tempDir = Files.createTempDirectory("folder-service-test-");
-    try {
-      Files.writeString(tempDir.resolve("b.txt"), "b");
-      Files.writeString(tempDir.resolve("a.txt"), "a");
-      Files.writeString(tempDir.resolve("c.txt"), "c");
+  void getFolderTree_nonExistentRoot_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.getFolderTree(tempDir.resolve("nope").toString()));
+  }
 
-      PageResponseDto<FolderContentItemDto> page =
-          folderService.getFolderContentPage(tempDir.toString(), "", 0, 10, "name,asc");
+  // ── getFolderTree(rootPath, relativePath) ────────────────────────────────
 
-      assertEquals(3, page.getTotalElements());
-      assertEquals(1, page.getTotalPages());
-      assertEquals(3, page.getContent().size());
-      assertEquals("a.txt", page.getContent().get(0).getName());
-      assertEquals("b.txt", page.getContent().get(1).getName());
-      assertEquals("c.txt", page.getContent().get(2).getName());
-    } finally {
-      Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-    }
+  @Test
+  void getFolderTreeWithRelativePath_validSubfolder_returnsSubtree() throws IOException {
+    Path sub = Files.createDirectory(tempDir.resolve("docs"));
+    Files.writeString(sub.resolve("readme.md"), "# Readme");
+
+    FolderDto tree = folderService.getFolderTree(tempDir.toString(), "docs");
+
+    assertEquals("docs", tree.getName());
+    assertEquals(1, tree.getFiles().size());
+    assertEquals("readme.md", tree.getFiles().get(0).getName());
   }
 
   @Test
-  void getFolderContentPage_invalidPath_throwsException() throws IOException {
-    Path tempDir = Files.createTempDirectory("folder-service-test-");
-    try {
-      assertThrows(
-          InvalidPathException.class,
-          () ->
-              folderService.getFolderContentPage(
-                  tempDir.toString(), "../outside", 0, 10, null));
-    } finally {
-      Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-    }
+  void getFolderTreeWithRelativePath_pathTraversal_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.getFolderTree(tempDir.toString(), "../../etc"));
+  }
+
+  // ── createFolder ─────────────────────────────────────────────────────────
+
+  @Test
+  void createFolder_normalCreate_createsFolderAndReturnsPath() throws IOException {
+    Path created = folderService.createFolder(tempDir.toString(), "", "newFolder");
+
+    assertTrue(Files.isDirectory(created));
+    assertEquals("newFolder", created.getFileName().toString());
+  }
+
+  @Test
+  void createFolder_nestedUnderExistingFolder() throws IOException {
+    Files.createDirectory(tempDir.resolve("parent"));
+
+    Path created = folderService.createFolder(tempDir.toString(), "parent", "child");
+
+    assertTrue(Files.isDirectory(created));
+    assertTrue(created.endsWith("child"));
+  }
+
+  @Test
+  void createFolder_pathTraversal_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.createFolder(tempDir.toString(), "../../", "hack"));
+  }
+
+  // ── deleteFolder ─────────────────────────────────────────────────────────
+
+  @Test
+  void deleteFolder_emptyFolder_deletesSuccessfully() throws IOException {
+    Files.createDirectory(tempDir.resolve("empty"));
+
+    folderService.deleteFolder(tempDir.toString(), "empty");
+
+    assertFalse(Files.exists(tempDir.resolve("empty")));
+  }
+
+  @Test
+  void deleteFolder_folderWithContents_deletesRecursively() throws IOException {
+    Path dir = Files.createDirectory(tempDir.resolve("full"));
+    Path sub = Files.createDirectory(dir.resolve("sub"));
+    Files.writeString(dir.resolve("file.txt"), "data");
+    Files.writeString(sub.resolve("nested.txt"), "nested");
+
+    folderService.deleteFolder(tempDir.toString(), "full");
+
+    assertFalse(Files.exists(tempDir.resolve("full")));
+  }
+
+  @Test
+  void deleteFolder_pathTraversal_throwsInvalidPathException() {
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.deleteFolder(tempDir.toString(), "../../etc"));
+  }
+
+  // ── renameOrMoveFolder ───────────────────────────────────────────────────
+
+  @Test
+  void renameOrMoveFolder_rename_successfullyRenames() throws IOException {
+    Files.createDirectory(tempDir.resolve("oldName"));
+
+    folderService.renameOrMoveFolder(tempDir.toString(), "oldName", "newName");
+
+    assertFalse(Files.exists(tempDir.resolve("oldName")));
+    assertTrue(Files.isDirectory(tempDir.resolve("newName")));
+  }
+
+  @Test
+  void renameOrMoveFolder_moveToSubfolder() throws IOException {
+    Files.createDirectory(tempDir.resolve("source"));
+    Files.createDirectory(tempDir.resolve("target"));
+
+    folderService.renameOrMoveFolder(tempDir.toString(), "source", "target/source");
+
+    assertFalse(Files.exists(tempDir.resolve("source")));
+    assertTrue(Files.isDirectory(tempDir.resolve("target/source")));
+  }
+
+  @Test
+  void renameOrMoveFolder_pathTraversal_throwsInvalidPathException() throws IOException {
+    Files.createDirectory(tempDir.resolve("safe"));
+
+    assertThrows(
+        InvalidPathException.class,
+        () -> folderService.renameOrMoveFolder(tempDir.toString(), "safe", "../../evil"));
+  }
+
+  // ── validatePath ─────────────────────────────────────────────────────────
+
+  @Test
+  void validatePath_validPath_doesNotThrow() {
+    Path valid = tempDir.resolve("somefile.txt");
+
+    assertDoesNotThrow(() -> folderService.validatePath(tempDir.toString(), valid));
+  }
+
+  @Test
+  void validatePath_outsideRoot_throwsInvalidPathException() {
+    Path outside = tempDir.resolve("../../etc/passwd").normalize();
+
+    assertThrows(
+        InvalidPathException.class, () -> folderService.validatePath(tempDir.toString(), outside));
+  }
+
+  // ── FileDto content verification ─────────────────────────────────────────
+
+  @Test
+  void getFolderTree_fileDtoContainsCorrectMetadata() throws IOException {
+    Files.writeString(tempDir.resolve("info.txt"), "12345");
+
+    FolderDto tree = folderService.getFolderTree(tempDir.toString());
+
+    assertEquals(1, tree.getFiles().size());
+    assertEquals("info.txt", tree.getFiles().get(0).getName());
+    assertEquals(5, tree.getFiles().get(0).getSize());
+    assertNotNull(tree.getFiles().get(0).getPath());
   }
 }
-
