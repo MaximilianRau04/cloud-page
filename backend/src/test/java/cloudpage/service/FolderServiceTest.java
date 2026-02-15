@@ -405,9 +405,7 @@ class FolderServiceTest {
   void getFolderContentPage_pathTraversal_throwsInvalidPathException() {
     assertThrows(
         InvalidPathException.class,
-        () ->
-            folderService.getFolderContentPage(
-                tempDir.toString(), "../../etc", 0, 10, null));
+        () -> folderService.getFolderContentPage(tempDir.toString(), "../../etc", 0, 10, null));
   }
 
   @Test

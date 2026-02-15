@@ -15,4 +15,3 @@ public class PageResponseDto<T> {
   private int totalPages;
   private int pageNumber;
 }
-

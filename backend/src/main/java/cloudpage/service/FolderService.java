@@ -104,7 +104,7 @@ public class FolderService {
                       throw new InvalidPathException(
                           "Invalid path detected while listing: " + path + " - " + e.getMessage());
                     }
-                    
+
                     // Calculate relative path from root to child
                     String itemRelativePath;
                     try {
@@ -114,10 +114,11 @@ public class FolderService {
                       itemRelativePath = itemRelativePath.replace('\\', '/');
                     } catch (IOException e) {
                       // Fallback to simple relativize if toRealPath fails
-                      itemRelativePath = Paths.get(rootPath).relativize(path.toAbsolutePath()).toString();
+                      itemRelativePath =
+                          Paths.get(rootPath).relativize(path.toAbsolutePath()).toString();
                       itemRelativePath = itemRelativePath.replace('\\', '/');
                     }
-                    
+
                     boolean isDirectory = Files.isDirectory(path);
                     long sizeValue = 0L;
                     String mimeType = null;
@@ -129,7 +130,10 @@ public class FolderService {
                         mimeType = Files.probeContentType(path);
                       } catch (IOException e) {
                         throw new FileAccessException(
-                            "Failed to read file attributes: " + path + " with exception: " + e.getMessage());
+                            "Failed to read file attributes: "
+                                + path
+                                + " with exception: "
+                                + e.getMessage());
                       }
                     }
                     return new FolderContentItemDto(
@@ -175,8 +179,7 @@ public class FolderService {
       case "name":
       default:
         comparator =
-            Comparator.comparing(
-                FolderContentItemDto::getName, String.CASE_INSENSITIVE_ORDER);
+            Comparator.comparing(FolderContentItemDto::getName, String.CASE_INSENSITIVE_ORDER);
         break;
     }
 
@@ -190,7 +193,7 @@ public class FolderService {
   private FolderDto readFolder(String rootPath, Path path) throws IOException {
     // Resolve root path once for relative path calculation
     Path rootReal = Paths.get(rootPath).toRealPath().normalize();
-    
+
     List<FolderDto> subfolders =
         Files.list(path)
             .filter(Files::isDirectory)
@@ -202,7 +205,10 @@ public class FolderService {
                     return readFolder(rootPath, subPath);
                   } catch (IOException e) {
                     throw new InvalidPathException(
-                        "Invalid path detected while reading folder: " + subPath + " - " + e.getMessage());
+                        "Invalid path detected while reading folder: "
+                            + subPath
+                            + " - "
+                            + e.getMessage());
                   }
                 })
             .collect(Collectors.toList());
@@ -215,7 +221,7 @@ public class FolderService {
                   try {
                     // Validate each child path to prevent symlink escapes
                     validatePath(rootPath, filePath);
-                    
+
                     // Calculate relative path from root to file
                     String relativePath;
                     try {
@@ -225,10 +231,11 @@ public class FolderService {
                       relativePath = relativePath.replace('\\', '/');
                     } catch (IOException e) {
                       // Fallback to simple relativize if toRealPath fails
-                      relativePath = Paths.get(rootPath).relativize(filePath.toAbsolutePath()).toString();
+                      relativePath =
+                          Paths.get(rootPath).relativize(filePath.toAbsolutePath()).toString();
                       relativePath = relativePath.replace('\\', '/');
                     }
-                    
+
                     BasicFileAttributes attrs =
                         Files.readAttributes(filePath, BasicFileAttributes.class);
                     return new FileDto(
@@ -238,7 +245,10 @@ public class FolderService {
                         Files.probeContentType(filePath));
                   } catch (IOException e) {
                     throw new FileAccessException(
-                        "Failed to read file attributes: " + filePath + " with exception: " + e.getMessage());
+                        "Failed to read file attributes: "
+                            + filePath
+                            + " with exception: "
+                            + e.getMessage());
                   }
                 })
             .collect(Collectors.toList());
@@ -263,14 +273,13 @@ public class FolderService {
       }
     }
 
-    return new FolderDto(
-        path.getFileName().toString(), folderRelativePath, subfolders, files);
+    return new FolderDto(path.getFileName().toString(), folderRelativePath, subfolders, files);
   }
 
   public void validatePath(String rootPath, Path path) throws IOException {
     Path rootReal = Paths.get(rootPath).toRealPath().normalize();
     Path pathReal;
-    
+
     // If path exists, resolve symlinks to get the real path
     if (Files.exists(path)) {
       pathReal = path.toRealPath().normalize();
@@ -296,7 +305,7 @@ public class FolderService {
         pathReal = path.toAbsolutePath().normalize();
       }
     }
-    
+
     if (!pathReal.startsWith(rootReal)) {
       throw new InvalidPathException("Path traversal attempt detected: " + path);
     }

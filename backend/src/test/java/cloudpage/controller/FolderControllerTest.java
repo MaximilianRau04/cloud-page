@@ -165,8 +165,7 @@ class FolderControllerTest {
         Arrays.asList(
             new FolderContentItemDto("file1.txt", "file1.txt", false, 100L, "text/plain"),
             new FolderContentItemDto("file2.txt", "file2.txt", false, 200L, "text/plain"));
-    PageResponseDto<FolderContentItemDto> pageResponse =
-        new PageResponseDto<>(content, 2L, 1, 0);
+    PageResponseDto<FolderContentItemDto> pageResponse = new PageResponseDto<>(content, 2L, 1, 0);
 
     when(folderService.getFolderContentPage(
             eq(tempDir.toString()), eq(""), eq(0), eq(10), eq(null)))
@@ -192,8 +191,7 @@ class FolderControllerTest {
     List<FolderContentItemDto> content =
         Collections.singletonList(
             new FolderContentItemDto("subfile.txt", "docs/subfile.txt", false, 50L, "text/plain"));
-    PageResponseDto<FolderContentItemDto> pageResponse =
-        new PageResponseDto<>(content, 1L, 1, 0);
+    PageResponseDto<FolderContentItemDto> pageResponse = new PageResponseDto<>(content, 1L, 1, 0);
 
     when(folderService.getFolderContentPage(
             eq(tempDir.toString()), eq("docs"), eq(0), eq(10), eq(null)))
@@ -219,8 +217,7 @@ class FolderControllerTest {
         Arrays.asList(
             new FolderContentItemDto("apple.txt", "apple.txt", false, 100L, "text/plain"),
             new FolderContentItemDto("zebra.txt", "zebra.txt", false, 200L, "text/plain"));
-    PageResponseDto<FolderContentItemDto> pageResponse =
-        new PageResponseDto<>(content, 2L, 1, 0);
+    PageResponseDto<FolderContentItemDto> pageResponse = new PageResponseDto<>(content, 2L, 1, 0);
 
     when(folderService.getFolderContentPage(
             eq(tempDir.toString()), eq(""), eq(0), eq(10), eq("name,asc")))
@@ -313,11 +310,9 @@ class FolderControllerTest {
     List<FolderContentItemDto> content =
         Collections.singletonList(
             new FolderContentItemDto("file3.txt", "file3.txt", false, 300L, "text/plain"));
-    PageResponseDto<FolderContentItemDto> pageResponse =
-        new PageResponseDto<>(content, 3L, 2, 1);
+    PageResponseDto<FolderContentItemDto> pageResponse = new PageResponseDto<>(content, 3L, 2, 1);
 
-    when(folderService.getFolderContentPage(
-            eq(tempDir.toString()), eq(""), eq(1), eq(2), eq(null)))
+    when(folderService.getFolderContentPage(eq(tempDir.toString()), eq(""), eq(1), eq(2), eq(null)))
         .thenReturn(pageResponse);
 
     mockMvc

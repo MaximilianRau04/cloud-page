@@ -60,7 +60,7 @@ public class FileService {
   private void validatePath(String rootPath, Path path) throws IOException {
     Path rootReal = Paths.get(rootPath).toRealPath().normalize();
     Path pathReal;
-    
+
     // If path exists, resolve symlinks to get the real path
     if (Files.exists(path)) {
       pathReal = path.toRealPath().normalize();
@@ -86,7 +86,7 @@ public class FileService {
         pathReal = path.toAbsolutePath().normalize();
       }
     }
-    
+
     if (!pathReal.startsWith(rootReal)) {
       throw new InvalidPathException("Path traversal attempt detected: " + path);
     }

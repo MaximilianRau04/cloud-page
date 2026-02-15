@@ -15,4 +15,3 @@ public class FolderContentItemDto {
   private long size;
   private String mimeType;
 }
-
