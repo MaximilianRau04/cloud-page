@@ -1,6 +1,8 @@
 package cloudpage.controller;
 
+import cloudpage.dto.FolderContentItemDto;
 import cloudpage.dto.FolderDto;
+import cloudpage.dto.PageResponseDto;
 import cloudpage.service.FolderService;
 import cloudpage.service.UserService;
 import java.io.IOException;
@@ -25,6 +27,24 @@ public class FolderController {
   public FolderDto getFolderByPath(@RequestParam String path) throws IOException {
     var user = userService.getCurrentUser();
     return folderService.getFolderTree(user.getRootFolderPath(), path);
+  }
+
+  @GetMapping("/content")
+  public PageResponseDto<FolderContentItemDto> getFolderContent(
+      @RequestParam(required = false, defaultValue = "") String path,
+      @RequestParam int page,
+      @RequestParam int size,
+      @RequestParam(required = false) String sort)
+      throws IOException {
+    if (page < 0) {
+      throw new IllegalArgumentException("page must be greater than or equal to 0");
+    }
+    if (size <= 0) {
+      throw new IllegalArgumentException("size must be greater than 0");
+    }
+
+    var user = userService.getCurrentUser();
+    return folderService.getFolderContentPage(user.getRootFolderPath(), path, page, size, sort);
   }
 
   @PostMapping
